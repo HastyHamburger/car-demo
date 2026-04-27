@@ -3,6 +3,6 @@ class Config:
     screen_height = 720
     throttle_speed = .05
     steering_speed = .01
-    drag = .8
+    drag = .99
 
 CFG = Config
