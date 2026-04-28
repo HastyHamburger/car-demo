@@ -7,7 +7,7 @@ class Game(pygame.sprite.Sprite):
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((CFG.screen_width, CFG.screen_height))
-        pygame.sprite.Sprite.__init__(self, self.cars)
+        pygame.sprite.Sprite.__init__(self, self.cars, self.all_sprites)
 
         self.px = 0
         self.py = 0
@@ -17,10 +17,17 @@ class Game(pygame.sprite.Sprite):
 
         self.car_image = self.load_image("assets/sports_car.jpg")
         self.car_rect = self.car_image.get_rect()
+        self.car_rect.width = CFG.car_width
+        self.car_rect.height = CFG.car_height
         self.update_car()
 
     cars = pygame.sprite.Group()
     all_sprites = pygame.sprite.RenderUpdates()
+
+    def rotate_point(self, tx, ty, theta, x, y):
+        nx = x * math.cos(theta) - y * math.sin(theta) + tx
+        ny = x * math.sin(theta) + y * math.cos(theta) + ty
+        return (nx, ny)
 
     def update_car(self):
         self.car_rect.topleft = (self.px, self.py)
@@ -73,17 +80,16 @@ class Game(pygame.sprite.Sprite):
             #erase previous frame
             self.screen.fill("black")
 
-            pygame.draw.rect(self.screen, (255, 255, 255), pygame.Rect(self.px, self.py, 20, 20))
-            pygame.draw.line(self.screen, (255, 0, 0), (self.px + 10, self.py + 10), (self.px + 10 + 20 * math.cos(self.rotation), self.py + 10 + 20 * math.sin(self.rotation)))
-            pygame.draw.polygon(self.screen, (0, 255, 0), (
-                (self.px + 10 * math.cos(self.rotation), self.py + 10 * math.sin(self.rotation)),
-                (self.px - 10 * math.cos(self.rotation), self.py + 10 * math.sin(self.rotation)),
-                (self.px - 10 * math.cos(self.rotation), self.py - 10 * math.sin(self.rotation)),
-                (self.px + 10 * math.cos(self.rotation), self.py - 10 * math.sin(self.rotation)),
+            pygame.draw.polygon(self.screen, (255, 255, 255), (
+                self.rotate_point(self.px + CFG.car_width / 2, self.py + CFG.car_height / 2, self.rotation, -CFG.car_width / 2, -CFG.car_height / 2),
+                self.rotate_point(self.px + CFG.car_width / 2, self.py + CFG.car_height / 2, self.rotation, CFG.car_width / 2, -CFG.car_height / 2),
+                self.rotate_point(self.px + CFG.car_width / 2, self.py + CFG.car_height / 2, self.rotation, CFG.car_width / 2, CFG.car_height / 2),
+                self.rotate_point(self.px + CFG.car_width / 2, self.py + CFG.car_height / 2, self.rotation, -CFG.car_width / 2, CFG.car_height / 2)
             ))
 
             self.update_car()
-            dirty = self.all_sprites.draw(self.screen)
+            print(self.all_sprites)
+            #dirty = self.cars.draw(self.screen)
             #pygame.display.update(dirty)
 
             #put stuff on new frame
