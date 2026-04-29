@@ -1,12 +1,13 @@
 import pygame
+from pygame import gfxdraw
 import math
 
 from config import CFG
 
-class Game(pygame.sprite.Sprite):
+class Game:
     def __init__(self):
         pygame.init()
-        self.screen = pygame.display.set_mode((CFG.screen_width, CFG.screen_height))
+        self.screen = pygame.display.set_mode((CFG.screen_width, CFG.screen_height), pygame.SCALED, vsync=1)
 
         self.px = 0
         self.py = 0
@@ -28,20 +29,33 @@ class Game(pygame.sprite.Sprite):
         [0, 3]
     ]
 
-    cars = pygame.sprite.Group()
-    all_sprites = pygame.sprite.RenderUpdates()
-
     def rotate_point(self, tx, ty, theta, x, y):
         nx = x * math.cos(theta) - y * math.sin(theta) + tx
         ny = x * math.sin(theta) + y * math.cos(theta) + ty
-        return (nx, ny)
+        return nx, ny
 
     def draw_rects(self, rects):
         for rect in rects:
             poly = []
             for map_point in self.rect_poly_map:
                 poly.append(self.rotate_point(self.px, self.py, self.rotation, rect[map_point[0] + 1] * CFG.car_width, rect[map_point[1] + 1] * CFG.car_height))
-            pygame.draw.polygon(self.screen, rect[0], poly)
+            #pygame.draw.polygon(self.screen, rect[0], poly)
+            pygame.gfxdraw.filled_polygon(self.screen, poly, rect[0])
+            pygame.gfxdraw.aapolygon(self.screen, poly, rect[0])
+
+    def resolve_wall_collision(self):
+        if self.px < 0.5 * CFG.car_width:
+            self.px = 0.5 * CFG.car_width
+            self.vx = 0
+        if self.px > 0.5 * -CFG.car_width + CFG.screen_width:
+            self.px = 0.5 * -CFG.car_width + CFG.screen_width
+            self.vx = 0
+        if self.py < 0.5 * CFG.car_width:
+            self.py = 0.5 * CFG.car_width
+            self.vy = 0
+        if self.py > 0.5 * -CFG.car_width + CFG.screen_height:
+            self.py = 0.5 * -CFG.car_width + CFG.screen_height
+            self.vy = 0
 
     def main(self):
         clock = pygame.time.Clock()
@@ -69,7 +83,7 @@ class Game(pygame.sprite.Sprite):
             #GAME LOGIC
             steering *= CFG.steering_centering
 
-            self.rotation += steering * math.sqrt(self.vx**2 + self.vy**2)
+            self.rotation += steering * math.sqrt(self.vx**2 + self.vy**2) ** CFG.steering_exponent
 
             self.vx += throttle * math.cos(self.rotation) * CFG.drag
             self.vy += throttle * math.sin(self.rotation) * CFG.drag
@@ -80,6 +94,8 @@ class Game(pygame.sprite.Sprite):
             self.px += self.vx
             self.py += self.vy
 
+            self.resolve_wall_collision()
+
             #RENDER
 
             #erase previous frame
@@ -88,7 +104,7 @@ class Game(pygame.sprite.Sprite):
             self.draw_rects(self.car_data)
 
             #put stuff on new frame
-            pygame.display.flip()
+            pygame.display.update()
 
             dt = clock.tick(60) / 1000
 
