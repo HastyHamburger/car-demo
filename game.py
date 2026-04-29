@@ -22,10 +22,17 @@ class Game(pygame.sprite.Sprite):
         self.update_car()
 
     car_data = [
-        [[220, 50, 50], [-.5, -.5], [.5, -.5], [.5, .5], [-.5, .5]], #main
-        [[150, 150, 220], [0.2, -.4], [.4, -.4], [.4, .4], [0.2, .4]], #windshield
-        [[200, 30, 30], [-0.4, -.4], [.1, -.4], [.1, .4], [-0.4, .4]], #top outline
-        [[220, 50, 50], [-0.35, -.3], [0.05, -.3], [0.05, .3], [-0.35, .3]] #top inner
+        [[220, 50, 50], -.5, .5, -.5, .5], #main
+        [[150, 150, 220], 0.2, .4, -.4, .4], #windshield
+        [[200, 30, 30], -0.4, .1, -.4, .4], #top outline
+        [[220, 50, 50], -0.35, .05, -.3, .3] #top inner
+    ]
+
+    rect_poly_map = [
+        [0, 2],
+        [1, 2],
+        [1, 3],
+        [0, 3]
     ]
 
     cars = pygame.sprite.Group()
@@ -39,9 +46,8 @@ class Game(pygame.sprite.Sprite):
     def draw_rects(self, rects):
         for rect in rects:
             poly = []
-            for point in rect[1:]:
-                poly.append(self.rotate_point(self.px, self.py, self.rotation, point[0] * CFG.car_width, point[1] * CFG.car_height))
-            print(poly)
+            for map_point in self.rect_poly_map:
+                poly.append(self.rotate_point(self.px, self.py, self.rotation, rect[map_point[0] + 1] * CFG.car_width, rect[map_point[1] + 1] * CFG.car_height))
             pygame.draw.polygon(self.screen, rect[0], poly)
 
     def update_car(self):
