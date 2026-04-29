@@ -7,19 +7,12 @@ class Game(pygame.sprite.Sprite):
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((CFG.screen_width, CFG.screen_height))
-        pygame.sprite.Sprite.__init__(self, self.cars, self.all_sprites)
 
         self.px = 0
         self.py = 0
         self.vx = 0
         self.vy = 0
         self.rotation = 0
-
-        self.car_image = self.load_image("assets/sports_car.jpg")
-        self.car_rect = self.car_image.get_rect()
-        self.car_rect.width = CFG.car_width
-        self.car_rect.height = CFG.car_height
-        self.update_car()
 
     car_data = [
         [[220, 50, 50], -.5, .5, -.5, .5], #main
@@ -50,17 +43,6 @@ class Game(pygame.sprite.Sprite):
                 poly.append(self.rotate_point(self.px, self.py, self.rotation, rect[map_point[0] + 1] * CFG.car_width, rect[map_point[1] + 1] * CFG.car_height))
             pygame.draw.polygon(self.screen, rect[0], poly)
 
-    def update_car(self):
-        self.car_rect.topleft = (self.px, self.py)
-        self.car_rect.clamp_ip(self.screen.get_rect())
-
-    def load_image(self, file):
-        try:
-            surface = pygame.image.load(file)
-        except pygame.error:
-            raise SystemExit(f"image: {file} loading error")
-        return surface.convert()
-
     def main(self):
         clock = pygame.time.Clock()
         running = True
@@ -85,6 +67,8 @@ class Game(pygame.sprite.Sprite):
                 steering += CFG.steering_speed
 
             #GAME LOGIC
+            steering *= CFG.steering_centering
+
             self.rotation += steering * math.sqrt(self.vx**2 + self.vy**2)
 
             self.vx += throttle * math.cos(self.rotation) * CFG.drag
@@ -100,13 +84,6 @@ class Game(pygame.sprite.Sprite):
 
             #erase previous frame
             self.screen.fill("black")
-
-            #pygame.draw.polygon(self.screen, (255, 255, 255), (
-            #    self.rotate_point(self.px, self.py, self.rotation, -CFG.car_width / 2, -CFG.car_height / 2),
-            #    self.rotate_point(self.px, self.py, self.rotation, CFG.car_width / 2, -CFG.car_height / 2),
-            #    self.rotate_point(self.px, self.py, self.rotation, CFG.car_width / 2, CFG.car_height / 2),
-            #    self.rotate_point(self.px, self.py, self.rotation, -CFG.car_width / 2, CFG.car_height / 2)
-            #))
 
             self.draw_rects(self.car_data)
 
