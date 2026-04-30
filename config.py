@@ -8,5 +8,6 @@ class Config:
     drag = .95
     car_height = 40
     car_width = 80
+    speed_convert = 10
 
 CFG = Config

@@ -9,6 +9,9 @@ class Game:
         pygame.init()
         self.screen = pygame.display.set_mode((CFG.screen_width, CFG.screen_height), pygame.SCALED, vsync=1)
 
+        pygame.font.init()
+        self.sped_font = pygame.font.SysFont("Comic Sans Ms", 32)
+
         self.px = 0
         self.py = 0
         self.vx = 0
@@ -39,7 +42,6 @@ class Game:
             poly = []
             for map_point in self.rect_poly_map:
                 poly.append(self.rotate_point(self.px, self.py, self.rotation, rect[map_point[0] + 1] * CFG.car_width, rect[map_point[1] + 1] * CFG.car_height))
-            #pygame.draw.polygon(self.screen, rect[0], poly)
             pygame.gfxdraw.filled_polygon(self.screen, poly, rect[0])
             pygame.gfxdraw.aapolygon(self.screen, poly, rect[0])
 
@@ -56,6 +58,10 @@ class Game:
         if self.py > 0.5 * -CFG.car_width + CFG.screen_height:
             self.py = 0.5 * -CFG.car_width + CFG.screen_height
             self.vy = 0
+
+    def render_sped(self):
+        sped_surface = self.sped_font.render(f"{round(math.sqrt(self.vx**2 + self.vy**2) * CFG.speed_convert)}mph", True, (255, 255, 255))
+        self.screen.blit(sped_surface, (0,0))
 
     def main(self):
         clock = pygame.time.Clock()
@@ -102,6 +108,8 @@ class Game:
             self.screen.fill("black")
 
             self.draw_rects(self.car_data)
+
+            self.render_sped()
 
             #put stuff on new frame
             pygame.display.update()
