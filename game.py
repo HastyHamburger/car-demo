@@ -10,7 +10,7 @@ class Game:
         self.screen = pygame.display.set_mode((CFG.screen_width, CFG.screen_height), pygame.SCALED, vsync=1)
 
         pygame.font.init()
-        self.sped_font = pygame.font.SysFont("Comic Sans Ms", 32)
+        self.sped_font = pygame.font.SysFont("Futura", 32)
 
         self.px = 0
         self.py = 0
@@ -37,27 +37,36 @@ class Game:
         ny = x * math.sin(theta) + y * math.cos(theta) + ty
         return nx, ny
 
-    def draw_rects(self, rects):
+    def rotate_rects(self, rects):
+        polys = []
         for rect in rects:
-            poly = []
+            poly = [rect[0]]
             for map_point in self.rect_poly_map:
                 poly.append(self.rotate_point(self.px, self.py, self.rotation, rect[map_point[0] + 1] * CFG.car_width, rect[map_point[1] + 1] * CFG.car_height))
-            pygame.gfxdraw.filled_polygon(self.screen, poly, rect[0])
-            pygame.gfxdraw.aapolygon(self.screen, poly, rect[0])
+            polys.append(poly)
+        return polys
 
-    def resolve_wall_collision(self):
-        if self.px < 0.5 * CFG.car_width:
-            self.px = 0.5 * CFG.car_width
-            self.vx = 0
-        if self.px > 0.5 * -CFG.car_width + CFG.screen_width:
-            self.px = 0.5 * -CFG.car_width + CFG.screen_width
-            self.vx = 0
-        if self.py < 0.5 * CFG.car_width:
-            self.py = 0.5 * CFG.car_width
-            self.vy = 0
-        if self.py > 0.5 * -CFG.car_width + CFG.screen_height:
-            self.py = 0.5 * -CFG.car_width + CFG.screen_height
-            self.vy = 0
+    def draw_rects(self, polys):
+        for poly in polys:
+            pygame.gfxdraw.filled_polygon(self.screen, poly[1:], poly[0])
+            pygame.gfxdraw.aapolygon(self.screen, poly[1:], poly[0])
+
+    def resolve_wall_collision(self, polys):
+        collider_data = polys[0][1:]
+        left = min([point[0] for point in collider_data])
+        right = max([point[0] for point in collider_data])
+        top = min([point[1] for point in collider_data])
+        bottom = max([point[1] for point in collider_data])
+        width = right - left
+        height = bottom - top
+        if left <= 0:
+            self.px = 0.5 * width
+        elif right >= CFG.screen_width:
+            self.px = -0.5 * width + CFG.screen_width
+        if top <= 0:
+            self.py = 0.5 * height
+        elif bottom >= CFG.screen_height:
+            self.py = -0.5 * height + CFG.screen_height
 
     def render_sped(self):
         sped_surface = self.sped_font.render(f"{round(math.sqrt(self.vx**2 + self.vy**2) * CFG.speed_convert)}mph", True, (255, 255, 255))
@@ -100,14 +109,15 @@ class Game:
             self.px += self.vx
             self.py += self.vy
 
-            self.resolve_wall_collision()
-
             #RENDER
 
             #erase previous frame
             self.screen.fill("black")
 
-            self.draw_rects(self.car_data)
+            polys = self.rotate_rects(self.car_data)
+            self.resolve_wall_collision(polys)
+            polys = self.rotate_rects(self.car_data)
+            self.draw_rects(polys)
 
             self.render_sped()
 
