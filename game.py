@@ -61,12 +61,20 @@ class Game:
         height = bottom - top
         if left <= 0:
             self.px = 0.5 * width
+            if self.vx < 0:
+                self.vx = 0
         elif right >= CFG.screen_width:
             self.px = -0.5 * width + CFG.screen_width
+            if self.vx > 0:
+                self.vx = 0
         if top <= 0:
             self.py = 0.5 * height
+            if self.vy < 0:
+                self.vy = 0
         elif bottom >= CFG.screen_height:
             self.py = -0.5 * height + CFG.screen_height
+            if self.vy > 0:
+                self.vy = 0
 
     def render_sped(self):
         sped_surface = self.sped_font.render(f"{round(math.sqrt(self.vx**2 + self.vy**2) * CFG.speed_convert)}mph", True, (255, 255, 255))
