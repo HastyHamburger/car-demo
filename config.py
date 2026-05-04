@@ -9,5 +9,10 @@ class Config:
     car_height = 40
     car_width = 80
     speed_convert = 10
+    health_height = 50
+    health_width = 500
+    health_offset = 25
+    health_outline = 3
+    max_health = 10
 
 CFG = Config

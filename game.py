@@ -18,6 +18,8 @@ class Game:
         self.vy = 0
         self.rotation = 0
 
+        self.health = CFG.max_health
+
     car_data = [
         [[220, 50, 50], -.5, .5, -.5, .5], #main
         [[150, 150, 220], 0.2, .4, -.4, .4], #windshield
@@ -31,6 +33,14 @@ class Game:
         [1, 3],
         [0, 3]
     ]
+
+    current_attacks = [
+        ["rect", 5, 5, 100, 1000, 200, 500, False] #[type, time_left, total_time, left, right, top, bottom, hit_car]
+    ]
+
+    attack_gradient = [[100, 25, 25], [200, 50, 50], [255, 100, 100]]
+
+    attack_length = .2
 
     def rotate_point(self, tx, ty, theta, x, y):
         nx = x * math.cos(theta) - y * math.sin(theta) + tx
@@ -80,6 +90,58 @@ class Game:
         sped_surface = self.sped_font.render(f"{round(math.sqrt(self.vx**2 + self.vy**2) * CFG.speed_convert)}mph", True, (255, 255, 255))
         self.screen.blit(sped_surface, (0,0))
 
+    def render_attacks(self, dt):
+        for attack in self.current_attacks:
+            if attack[1] <= 0:
+                self.current_attacks.remove(attack)
+            else:
+                if attack[1] <= self.attack_length:
+                    body_color = self.attack_gradient[2]
+                    attack[1] -= dt
+                else:
+                    body_color = self.lerp_color(self.attack_gradient[0], self.attack_gradient[1], 1 - attack[1] / attack[2])
+                    attack[1] -= dt
+                attack_rect = pygame.rect.Rect(attack[3], attack[5], attack[4] - attack[3], attack[6] - attack[5])
+                pygame.draw.rect(self.screen, body_color, attack_rect)
+                pygame.draw.rect(self.screen, [255, 150, 150], attack_rect, 2)
+
+    def lerp_color(self, color1, color2, percent):
+        new_color = [
+            color1[0] * (1 - percent) + color2[0] * percent,
+            color1[1] * (1 - percent) + color2[1] * percent,
+            color1[2] * (1 - percent) + color2[2] * percent,
+        ]
+        return new_color
+
+    def resolve_attacks(self, polys):
+        car_collider = polys[0]
+        for i in range(len(car_collider) - 1):
+            p1 = car_collider[i + 1]
+            p2 = car_collider[(i + 1) % (len(car_collider) - 1) + 1]
+            for attack in self.current_attacks:
+                if attack[1] <= self.attack_length and not attack[7]:
+                    attack_rect = pygame.rect.Rect(attack[3], attack[5], attack[4] - attack[3], attack[6] - attack[5])
+                    if attack_rect.clipline(p1, p2):
+                        self.health -= 1
+                        attack[7] = True
+
+    def render_health(self):
+        left = CFG.screen_width / 2 - CFG.health_width / 2
+        top = CFG.screen_height - CFG.health_height - CFG.health_offset
+        pygame.draw.rect(self.screen, [120, 120, 120], pygame.rect.Rect(left, top, CFG.health_width, CFG.health_height))
+        pygame.draw.rect(self.screen, [200, 0, 0], pygame.rect.Rect(
+            left + CFG.health_outline,
+            top + CFG.health_outline,
+            CFG.health_width * self.health / CFG.max_health - CFG.health_outline * 2,
+            CFG.health_height - CFG.health_outline * 2
+        ))
+        for i in range(self.health - 1):
+            pygame.draw.rect(self.screen, [255, 100, 100], pygame.rect.Rect(
+                left + (i + 1) * CFG.health_width / CFG.max_health,
+                top + CFG.health_outline,
+                CFG.health_outline,
+                CFG.health_height - CFG.health_outline * 2))
+
     def main(self):
         clock = pygame.time.Clock()
         running = True
@@ -117,17 +179,31 @@ class Game:
             self.px += self.vx
             self.py += self.vy
 
+            polys = self.rotate_rects(self.car_data)
+            self.resolve_wall_collision(polys)
+            polys = self.rotate_rects(self.car_data)
+
+            self.resolve_attacks(polys)
+
             #RENDER
 
             #erase previous frame
             self.screen.fill("black")
 
-            polys = self.rotate_rects(self.car_data)
-            self.resolve_wall_collision(polys)
-            polys = self.rotate_rects(self.car_data)
-            self.draw_rects(polys)
+            #draw all bounding boxes for attacks
+            try:
+                # noinspection PyUnboundLocalVariable
+                self.render_attacks(dt)
+            except UnboundLocalError:
+                pass
 
+            #draw speedometer
             self.render_sped()
+
+            self.render_health()
+
+            #draw car
+            self.draw_rects(polys)
 
             #put stuff on new frame
             pygame.display.update()
