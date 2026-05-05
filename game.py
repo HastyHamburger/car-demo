@@ -20,13 +20,16 @@ class Game:
 
         self.health = CFG.max_health
 
+        self.adt = 0
+        self.current_attack_indexes = []
+        self.attack_counter = 0
+
     car_data = [
         [[220, 50, 50], -.5, .5, -.5, .5], #main
         [[150, 150, 220], 0.2, .4, -.4, .4], #windshield
         [[200, 30, 30], -0.4, .1, -.4, .4], #top outline
         [[220, 50, 50], -0.35, .05, -.3, .3] #top inner
     ]
-
     rect_poly_map = [
         [0, 2],
         [1, 2],
@@ -34,16 +37,13 @@ class Game:
         [0, 3]
     ]
 
-    current_attacks = [
-        ["rect", 5, 5, 100, 1000, 200, 500, False, 0] #[type, time_left, total_time, left, right, top, bottom, hit_car]
-    ]
-
+    current_attacks = []  #[[type, time_left, total_time, left, right, top, bottom, hit_car]]
     attack_gradients = [
         [[100, 25, 25], [200, 50, 50], [255, 100, 100]], #[start, end, flash/outline]
         [[25, 100, 25], [50, 200, 50], [100, 255, 100]],
         [[25, 25, 100], [50, 50, 200], [100, 100, 255]],
+        [[80, 80, 25], [180, 180, 50], [220, 220, 100]]
     ]
-
     attack_length = .2
 
     def rotate_point(self, tx, ty, theta, x, y):
@@ -155,11 +155,36 @@ class Game:
                 CFG.health_outline,
                 CFG.health_height - CFG.health_outline * 2))
 
+    def attack0(self):
+        amount = 3
+        if self.attack_counter <= amount:
+            interval = .5
+            if self.adt >= self.attack_counter * interval:
+                left = self.attack_counter * CFG.screen_width / (amount - 0.5)
+                right = left + CFG.screen_width / (amount - 0.5) / 2
+                self.add_attack("rect", 2, self.attack_counter * CFG.screen_width / (amount - 0.5), right, 0, CFG.screen_height, 3)
+                self.attack_counter += 1
+        else:
+            self.attack_counter = 0
+            self.adt = 0
+            self.current_attack_indexes.remove(0)
+
+    def attack1(self):
+        print("2")
+
+    attack_functions = [
+        attack0,
+        attack1
+    ]
+
+    def run_attacks(self):
+        for attack_index in self.current_attack_indexes:
+            # noinspection PyTypeHints
+            self.attack_functions[attack_index](self)
+
     def main(self):
         clock = pygame.time.Clock()
         running = True
-
-        self.add_attack("rect", 10, 500, 1500, 300, 650, 1)
 
         while running:
             steering = 0
@@ -198,6 +223,7 @@ class Game:
             self.resolve_wall_collision(polys)
             polys = self.rotate_rects(self.car_data)
 
+            self.run_attacks()
             self.resolve_attacks(polys)
 
             #RENDER
@@ -224,5 +250,6 @@ class Game:
             pygame.display.update()
 
             dt = clock.tick(60) / 1000
+            self.adt += dt
 
 GME = Game
