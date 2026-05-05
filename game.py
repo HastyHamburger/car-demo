@@ -35,10 +35,14 @@ class Game:
     ]
 
     current_attacks = [
-        ["rect", 5, 5, 100, 1000, 200, 500, False] #[type, time_left, total_time, left, right, top, bottom, hit_car]
+        ["rect", 5, 5, 100, 1000, 200, 500, False, 0] #[type, time_left, total_time, left, right, top, bottom, hit_car]
     ]
 
-    attack_gradient = [[100, 25, 25], [200, 50, 50], [255, 100, 100]]
+    attack_gradients = [
+        [[100, 25, 25], [200, 50, 50], [255, 100, 100]], #[start, end, flash/outline]
+        [[25, 100, 25], [50, 200, 50], [100, 255, 100]],
+        [[25, 25, 100], [50, 50, 200], [100, 100, 255]],
+    ]
 
     attack_length = .2
 
@@ -95,15 +99,21 @@ class Game:
             if attack[1] <= 0:
                 self.current_attacks.remove(attack)
             else:
+                gradient = self.attack_gradients[attack[8]]
                 if attack[1] <= self.attack_length:
-                    body_color = self.attack_gradient[2]
+                    body_color = gradient[2]
                     attack[1] -= dt
                 else:
-                    body_color = self.lerp_color(self.attack_gradient[0], self.attack_gradient[1], 1 - attack[1] / attack[2])
+                    body_color = self.lerp_color(gradient[0], gradient[1], 1 - attack[1] / attack[2])
                     attack[1] -= dt
-                attack_rect = pygame.rect.Rect(attack[3], attack[5], attack[4] - attack[3], attack[6] - attack[5])
-                pygame.draw.rect(self.screen, body_color, attack_rect)
-                pygame.draw.rect(self.screen, [255, 150, 150], attack_rect, 2)
+                width, height = attack[4] - attack[3], attack[6] - attack[5]
+                #body
+                rect_surface = pygame.Surface((width, height))
+                rect_surface.set_alpha(CFG.attack_transparency)
+                rect_surface.fill(body_color)
+                self.screen.blit(rect_surface, (attack[3], attack[5]))
+                #outline
+                pygame.draw.rect(self.screen, gradient[2], pygame.rect.Rect(attack[3], attack[5], width, height), 2)
 
     def lerp_color(self, color1, color2, percent):
         new_color = [
@@ -125,10 +135,13 @@ class Game:
                         self.health -= 1
                         attack[7] = True
 
+    def add_attack(self, type, time, left, right, top, bottom, color):
+        self.current_attacks.append([type, time, time, left, right, top, bottom, False, color])
+
     def render_health(self):
         left = CFG.screen_width / 2 - CFG.health_width / 2
         top = CFG.screen_height - CFG.health_height - CFG.health_offset
-        pygame.draw.rect(self.screen, [120, 120, 120], pygame.rect.Rect(left, top, CFG.health_width, CFG.health_height))
+        pygame.draw.rect(self.screen, [150, 150, 150], pygame.rect.Rect(left, top, CFG.health_width, CFG.health_height))
         pygame.draw.rect(self.screen, [200, 0, 0], pygame.rect.Rect(
             left + CFG.health_outline,
             top + CFG.health_outline,
@@ -136,7 +149,7 @@ class Game:
             CFG.health_height - CFG.health_outline * 2
         ))
         for i in range(self.health - 1):
-            pygame.draw.rect(self.screen, [255, 100, 100], pygame.rect.Rect(
+            pygame.draw.rect(self.screen, [255, 120, 120], pygame.rect.Rect(
                 left + (i + 1) * CFG.health_width / CFG.max_health,
                 top + CFG.health_outline,
                 CFG.health_outline,
@@ -145,6 +158,8 @@ class Game:
     def main(self):
         clock = pygame.time.Clock()
         running = True
+
+        self.add_attack("rect", 10, 500, 1500, 300, 650, 1)
 
         while running:
             steering = 0

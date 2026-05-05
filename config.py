@@ -14,5 +14,6 @@ class Config:
     health_offset = 25
     health_outline = 3
     max_health = 10
+    attack_transparency = 128
 
 CFG = Config
