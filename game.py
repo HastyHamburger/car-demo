@@ -21,7 +21,7 @@ class Game:
         self.health = CFG.max_health
 
         self.adt = 0
-        self.current_attack_indexes = []
+        self.current_attack_indexes = [1, 0]
         self.attack_counter = 0
 
     car_data = [
@@ -39,10 +39,10 @@ class Game:
 
     current_attacks = []  #[[type, time_left, total_time, left, right, top, bottom, hit_car]]
     attack_gradients = [
-        [[100, 25, 25], [200, 50, 50], [255, 100, 100]], #[start, end, flash/outline]
-        [[25, 100, 25], [50, 200, 50], [100, 255, 100]],
-        [[25, 25, 100], [50, 50, 200], [100, 100, 255]],
-        [[80, 80, 25], [180, 180, 50], [220, 220, 100]]
+        [[80, 0, 0], [255, 0, 0], [255, 100, 100]], #[start, end, flash/outline]
+        [[0, 80, 0], [0, 255, 0], [100, 255, 100]],
+        [[0, 0, 80], [0, 0, 255], [100, 100, 255]],
+        [[80, 80, 0], [255, 255, 0], [255, 255, 150]]
     ]
     attack_length = .2
 
@@ -170,7 +170,18 @@ class Game:
             self.current_attack_indexes.remove(0)
 
     def attack1(self):
-        print("2")
+        amount = 2
+        if self.attack_counter <= amount:
+            interval = .5
+            if self.adt >= self.attack_counter * interval:
+                top = self.attack_counter * CFG.screen_height / (amount - 0.5)
+                bottom = top + CFG.screen_height / (amount - 0.5) / 2
+                self.add_attack("rect", 2, 0, CFG.screen_width, self.attack_counter * CFG.screen_height / (amount - 0.5), bottom, 3)
+                self.attack_counter += 1
+        else:
+            self.attack_counter = 0
+            self.adt = 0
+            self.current_attack_indexes.remove(1)
 
     attack_functions = [
         attack0,
@@ -179,7 +190,7 @@ class Game:
 
     def run_attacks(self):
         for attack_index in self.current_attack_indexes:
-            # noinspection PyTypeHints
+            # noinspection PyTypeHints,PyArgumentList
             self.attack_functions[attack_index](self)
 
     def main(self):
