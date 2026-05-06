@@ -21,7 +21,7 @@ class Game:
         self.health = CFG.max_health
 
         self.adt = 0
-        self.current_attack_indexes = [1, 0]
+        self.current_moves = [0, 1]
         self.attack_counter = 0
 
     car_data = [
@@ -155,47 +155,36 @@ class Game:
                 CFG.health_outline,
                 CFG.health_height - CFG.health_outline * 2))
 
-    def attack0(self):
-        amount = 3
-        if self.attack_counter <= amount:
-            interval = .5
-            if self.adt >= self.attack_counter * interval:
-                left = self.attack_counter * CFG.screen_width / (amount - 0.5)
-                right = left + CFG.screen_width / (amount - 0.5) / 2
-                self.add_attack("rect", 2, self.attack_counter * CFG.screen_width / (amount - 0.5), right, 0, CFG.screen_height, 3)
-                self.attack_counter += 1
-        else:
-            self.attack_counter = 0
-            self.adt = 0
-            self.current_attack_indexes.remove(0)
+    def move0(self, move_data):
+        left = move_data[4] * CFG.screen_width / (move_data[1] - 0.5)
+        right = left + CFG.screen_width / (move_data[1] - 0.5) / 2
+        self.add_attack("rect", 2, move_data[4] * CFG.screen_width / (move_data[1] - 0.5), right, 0, CFG.screen_height, 3)
 
-    def attack1(self):
-        amount = 2
-        if self.attack_counter <= amount:
-            interval = .5
-            if self.adt >= self.attack_counter * interval:
-                top = self.attack_counter * CFG.screen_height / (amount - 0.5)
-                bottom = top + CFG.screen_height / (amount - 0.5) / 2
-                self.add_attack("rect", 2, 0, CFG.screen_width, self.attack_counter * CFG.screen_height / (amount - 0.5), bottom, 3)
-                self.attack_counter += 1
-        else:
-            self.attack_counter = 0
-            self.adt = 0
-            self.current_attack_indexes.remove(1)
+    def move1(self, move_data):
+        top = move_data[4] * CFG.screen_height / (move_data[1] - 0.5)
+        bottom = top + CFG.screen_height / (move_data[1] - 0.5) / 2
+        self.add_attack("rect", 2, 0, CFG.screen_width, move_data[4] * CFG.screen_height / (move_data[1] - 0.5), bottom, 3)
 
-    attack_functions = [
-        attack0,
-        attack1
+    move_data = [
+        [move0, 3, .5, 0, 0], #[function, iterations, interval, time since started, times called]
+        [move1, 2, 1, 0, 0]
     ]
 
-    def run_attacks(self):
-        for attack_index in self.current_attack_indexes:
+    def run_attacks(self, dt):
+        for i, attack_index in enumerate(self.current_moves):
             # noinspection PyTypeHints,PyArgumentList
-            self.attack_functions[attack_index](self)
+            move_data = self.move_data[attack_index]
+            move_data[3] += dt
+            if move_data[3] >= move_data[4] * move_data[2]:
+                move_data[0](self, move_data)
+                move_data[4] += 1
+            if move_data[4] == move_data[1]:
+                self.current_moves.pop(i)
 
     def main(self):
         clock = pygame.time.Clock()
         running = True
+        dt = 0
 
         while running:
             steering = 0
@@ -234,7 +223,7 @@ class Game:
             self.resolve_wall_collision(polys)
             polys = self.rotate_rects(self.car_data)
 
-            self.run_attacks()
+            self.run_attacks(dt)
             self.resolve_attacks(polys)
 
             #RENDER
