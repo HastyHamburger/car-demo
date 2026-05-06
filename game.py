@@ -21,7 +21,7 @@ class Game:
         self.health = CFG.max_health
 
         self.adt = 0
-        self.current_moves = [0, 1]
+        self.current_moves = [0, 1, 2]
         self.attack_counter = 0
 
     car_data = [
@@ -165,9 +165,21 @@ class Game:
         bottom = top + CFG.screen_height / (move_data[1] - 0.5) / 2
         self.add_attack("rect", 2, 0, CFG.screen_width, move_data[4] * CFG.screen_height / (move_data[1] - 0.5), bottom, 3)
 
+    def move2(self, move_data):
+        attack_index, iterations = move_data[4], move_data[1]
+        size = .9
+        width = CFG.screen_width / iterations * size
+        if attack_index % 2 == 0:
+            top = CFG.screen_height * .1
+        else:
+            top = CFG.screen_height * .9 - width
+        left = attack_index * width / size
+        self.add_attack("rect", 2, left, left + width, top, top + width, 1)
+
     move_data = [
         [move0, 3, .5, 0, 0], #[function, iterations, interval, time since started, times called]
-        [move1, 2, 1, 0, 0]
+        [move1, 2, 1, 0, 0],
+        [move2, 5, 1, 0, 0]
     ]
 
     def run_attacks(self, dt):
@@ -227,16 +239,11 @@ class Game:
             self.resolve_attacks(polys)
 
             #RENDER
-
             #erase previous frame
             self.screen.fill("black")
 
             #draw all bounding boxes for attacks
-            try:
-                # noinspection PyUnboundLocalVariable
-                self.render_attacks(dt)
-            except UnboundLocalError:
-                pass
+            self.render_attacks(dt)
 
             #draw speedometer
             self.render_sped()
