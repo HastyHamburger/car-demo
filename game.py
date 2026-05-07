@@ -20,9 +20,14 @@ class Game:
 
         self.health = CFG.max_health
 
-        self.adt = 0
-        self.current_moves = [0, 1, 2]
+        self.current_moves = []
         self.attack_counter = 0
+
+        self.running = True
+        self.clock = pygame.time.Clock()
+        self.dt = 0
+
+        self.function_queue = []
 
     car_data = [
         [[220, 50, 50], -.5, .5, -.5, .5], #main
@@ -158,14 +163,15 @@ class Game:
     def move0(self, move_data):
         left = move_data[4] * CFG.screen_width / (move_data[1] - 0.5)
         right = left + CFG.screen_width / (move_data[1] - 0.5) / 2
-        self.add_attack("rect", 2, move_data[4] * CFG.screen_width / (move_data[1] - 0.5), right, 0, CFG.screen_height, 3)
+        self.add_attack("rect", move_data[5], move_data[4] * CFG.screen_width / (move_data[1] - 0.5), right, 0, CFG.screen_height, 3)
 
     def move1(self, move_data):
         top = move_data[4] * CFG.screen_height / (move_data[1] - 0.5)
         bottom = top + CFG.screen_height / (move_data[1] - 0.5) / 2
-        self.add_attack("rect", 2, 0, CFG.screen_width, move_data[4] * CFG.screen_height / (move_data[1] - 0.5), bottom, 3)
+        self.add_attack("rect", move_data[5], 0, CFG.screen_width, move_data[4] * CFG.screen_height / (move_data[1] - 0.5), bottom, 3)
 
     def move2(self, move_data):
+        print("2 ran")
         attack_index, iterations = move_data[4], move_data[1]
         size = .9
         width = CFG.screen_width / iterations * size
@@ -174,38 +180,67 @@ class Game:
         else:
             top = CFG.screen_height * .9 - width
         left = attack_index * width / size
-        self.add_attack("rect", 2, left, left + width, top, top + width, 1)
+        self.add_attack("rect", move_data[5], left, left + width, top, top + width, 1)
 
+    #[[function, iterations, interval, time since started, times called, attack_length]]
     move_data = [
-        [move0, 3, .5, 0, 0], #[function, iterations, interval, time since started, times called]
-        [move1, 2, 1, 0, 0],
-        [move2, 5, 1, 0, 0]
+        [move0, 3, .5, 0, 0, 2], #vertical lines
+        [move1, 2, 1, 0, 0, 2], #horizontal lines
+        [move2, 5, .5, 0, 0, 2] #zig-zagging squares
     ]
 
-    def run_attacks(self, dt):
+    def add_move(self, move_index):
+        print(move_index)
+        self.current_moves.append(move_index)
+
+    def run_moves(self, dt):
         for i, attack_index in enumerate(self.current_moves):
-            # noinspection PyTypeHints,PyArgumentList
             move_data = self.move_data[attack_index]
             move_data[3] += dt
             if move_data[3] >= move_data[4] * move_data[2]:
                 move_data[0](self, move_data)
                 move_data[4] += 1
             if move_data[4] == move_data[1]:
+                move_data[4] = 0
                 self.current_moves.pop(i)
 
-    def main(self):
-        clock = pygame.time.Clock()
-        running = True
-        dt = 0
+    def run_later(self, function, delay, args):
+        self.function_queue.append([function, delay, args])
 
-        while running:
+    def run_queue(self, dt):
+        for function in self.function_queue:
+            function[1] -= dt
+            if function[1] <= 0:
+                if self.is_iterable(function[2]):
+                    function[0](*function[2])
+                else:
+                    function[0](function[2])
+                self.function_queue.remove(function)
+
+    def run_move_sequence(self, moves, buffer, recursive=False):
+        delay = 0
+        for move in moves:
+            self.run_later(self.add_move, delay, move)
+            data = self.move_data[move]
+            delay += data[1] * data[2] + data[5] + buffer
+        if recursive:
+            self.run_later(self.run_move_sequence, delay, [moves, buffer, True])
+
+    def is_iterable(self, item):
+        try:
+            iter(item)
+            return True
+        except TypeError:
+            return False
+
+    def main_func(self):
+        if self.running:
             steering = 0
             throttle = 0
             for event in pygame.event.get():
                 #game closed
                 if event.type == pygame.QUIT:
-                    running = False
-
+                    self.running = False
             #keys held down
             keys = pygame.key.get_pressed()
             if keys[pygame.K_w]:
@@ -235,7 +270,9 @@ class Game:
             self.resolve_wall_collision(polys)
             polys = self.rotate_rects(self.car_data)
 
-            self.run_attacks(dt)
+            self.run_queue(self.dt)
+
+            self.run_moves(self.dt)
             self.resolve_attacks(polys)
 
             #RENDER
@@ -243,7 +280,7 @@ class Game:
             self.screen.fill("black")
 
             #draw all bounding boxes for attacks
-            self.render_attacks(dt)
+            self.render_attacks(self.dt)
 
             #draw speedometer
             self.render_sped()
@@ -256,7 +293,6 @@ class Game:
             #put stuff on new frame
             pygame.display.update()
 
-            dt = clock.tick(60) / 1000
-            self.adt += dt
+            self.dt = self.clock.tick(60) / 1000
 
 GME = Game
